@@ -30,7 +30,13 @@ async function run() {
 
     const surveyCollection = client.db('surveyDB').collection('survey')
 
-    app.get('/mostVotedSurveys', async (req,res) =>{
+    app.get('/surveys/latest', async(req,res) =>{
+      const cursor = surveyCollection.find().sort({ creationTime: -1 }).limit(6);
+      const result = await cursor.toArray();
+      res.send(result);
+    })
+
+    app.get('/surveys/most-voted', async (req,res) =>{
       const cursor = surveyCollection.find().sort({ totalVotes: -1 }).limit(6);
       const result = await cursor.toArray();
       res.send(result);
