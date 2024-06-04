@@ -27,6 +27,28 @@ async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
+
+    const surveyCollection = client.db('surveyDB').collection('survey')
+
+    app.get('/mostVotedSurveys', async (req,res) =>{
+      const cursor = surveyCollection.find().sort({ totalVotes: -1 }).limit(6);
+      const result = await cursor.toArray();
+      res.send(result);
+    })
+
+    app.post('/surveys',async (req,res) =>{
+      const newSurvey = req.body;
+      if (!newSurvey.status) {
+        newSurvey.status = 'publish';
+    }
+
+    // Set the creation timestamp
+    newSurvey.creationTime = new Date().toISOString();
+    const result = await surveyCollection.insertOne(newSurvey)
+    res.send(result)
+    })
+
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
