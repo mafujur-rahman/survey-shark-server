@@ -36,6 +36,11 @@ async function run() {
       res.send(result);
     })
 
+    app.get('/surveys', async (req,res) =>{
+      const result = await surveyCollection.find().toArray();
+      res.send(result);
+    })
+
     app.post('/surveys',async (req,res) =>{
       const newSurvey = req.body;
       if (!newSurvey.status) {
