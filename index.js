@@ -1,8 +1,10 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -22,12 +24,28 @@ const client = new MongoClient(uri, {
   }
 });
 
+
 async function run() {
   try {
     // Connect the client to the server (optional starting in v4.7)
     await client.connect();
 
+    const userCollection = client.db('surveyDB').collection('users');
     const surveyCollection = client.db('surveyDB').collection('survey');
+
+      // Authentication routes
+      app.post('/users', async (req, res) => {
+        const user = req.body;
+
+        const query = {email: user.email};
+        const existingUser = await userCollection.findOne(query);
+        if(existingUser){
+          return res.send({message: 'user already exist'})
+        }
+        const result = await userCollection.insertOne(user);
+        res.send(result);
+        
+      });
 
     app.get('/surveys/latest', async (req, res) => {
       const cursor = surveyCollection.find().sort({ creationTime: -1 }).limit(6);
