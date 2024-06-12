@@ -3,8 +3,7 @@ const cors = require('cors');
 require('dotenv').config();
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
+
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -38,7 +37,7 @@ async function run() {
         const result = await userCollection.find().toArray();
         res.send(result);
       })
-      
+
       app.post('/users', async (req, res) => {
         const user = req.body;
 
@@ -50,6 +49,45 @@ async function run() {
         const result = await userCollection.insertOne(user);
         res.send(result);
         
+      });
+
+      app.delete('/users/:id', async(req,res) =>{
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id)}
+        const result = await userCollection.deleteOne(query);
+        res.send(result)
+      });
+
+      app.patch('/users/admin/:id', async (req, res) => {
+        const id = req.params.id;
+        const filter = { _id: new ObjectId(id) };
+        
+        try {
+          const user = await userCollection.findOne(filter);
+          if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+          }
+          
+          let newRole;
+          if (user.role === 'user') {
+            newRole = 'surveyor';
+          } else if (user.role === 'surveyor') {
+            newRole = 'admin';
+          } else {
+            return res.status(400).json({ error: 'Role cannot be updated' });
+          }
+  
+          const updatedDoc = {
+            $set: {
+              role: newRole
+            }
+          };
+  
+          const result = await userCollection.updateOne(filter, updatedDoc);
+          res.send(result);
+        } catch (error) {
+          res.status(500).json({ error: error.message });
+        }
       });
 
     app.get('/surveys/latest', async (req, res) => {
