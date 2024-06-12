@@ -32,63 +32,110 @@ async function run() {
     const userCollection = client.db('surveyDB').collection('users');
     const surveyCollection = client.db('surveyDB').collection('survey');
 
-      // Authentication routes
-      app.get('/users', async(req,res) =>{
-        const result = await userCollection.find().toArray();
+    // Authentication routes
+    app.get('/users', async (req, res) => {
+      const result = await userCollection.find().toArray();
+      res.send(result);
+    })
+    app.get('/users', async (req, res) => {
+      try {
+        const { role } = req.query;
+        const filter = role ? { role } : {};
+        const result = await userCollection.find(filter).toArray();
         res.send(result);
-      })
+      } catch (error) {
+        res.status(500).json({ error: error.message });
+      }
+    });
 
-      app.post('/users', async (req, res) => {
-        const user = req.body;
+    app.post('/users', async (req, res) => {
+      const user = req.body;
 
-        const query = {email: user.email};
-        const existingUser = await userCollection.findOne(query);
-        if(existingUser){
-          return res.send({message: 'user already exist'})
+      const query = { email: user.email };
+      const existingUser = await userCollection.findOne(query);
+      if (existingUser) {
+        return res.send({ message: 'user already exist' })
+      }
+      const result = await userCollection.insertOne(user);
+      res.send(result);
+
+    });
+
+    // manage users
+    app.delete('/users/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) }
+      const result = await userCollection.deleteOne(query);
+      res.send(result)
+    });
+
+    app.patch('/users/admin/:id', async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+
+      try {
+        const user = await userCollection.findOne(filter);
+        if (!user) {
+          return res.status(404).json({ error: 'User not found' });
         }
-        const result = await userCollection.insertOne(user);
+
+        let newRole;
+        if (user.role === 'user') {
+          newRole = 'surveyor';
+        } else if (user.role === 'surveyor') {
+          newRole = 'admin';
+        } else {
+          return res.status(400).json({ error: 'Role cannot be updated' });
+        }
+
+        const updatedDoc = {
+          $set: {
+            role: newRole
+          }
+        };
+
+        const result = await userCollection.updateOne(filter, updatedDoc);
         res.send(result);
-        
-      });
+      } catch (error) {
+        res.status(500).json({ error: error.message });
+      }
+    });
 
-      app.delete('/users/:id', async(req,res) =>{
-        const id = req.params.id;
-        const query = { _id: new ObjectId(id)}
-        const result = await userCollection.deleteOne(query);
-        res.send(result)
-      });
+    // manage surveys
+    app.patch('/surveys/admin/:id', async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
 
-      app.patch('/users/admin/:id', async (req, res) => {
-        const id = req.params.id;
-        const filter = { _id: new ObjectId(id) };
-        
-        try {
-          const user = await userCollection.findOne(filter);
-          if (!user) {
-            return res.status(404).json({ error: 'User not found' });
-          }
-          
-          let newRole;
-          if (user.role === 'user') {
-            newRole = 'surveyor';
-          } else if (user.role === 'surveyor') {
-            newRole = 'admin';
-          } else {
-            return res.status(400).json({ error: 'Role cannot be updated' });
-          }
-  
-          const updatedDoc = {
-            $set: {
-              role: newRole
-            }
-          };
-  
-          const result = await userCollection.updateOne(filter, updatedDoc);
-          res.send(result);
-        } catch (error) {
-          res.status(500).json({ error: error.message });
+      try {
+        // Fetch the current survey
+        const survey = await surveyCollection.findOne(filter);
+        if (!survey) {
+          return res.status(404).json({ error: 'Survey not found' });
         }
-      });
+
+        // Determine the new status
+        let newStatus;
+        if (survey.status === 'publish') {
+          newStatus = 'unpublish';
+        } else if (survey.status === 'unpublish') {
+          newStatus = 'publish';
+        } else {
+          return res.status(400).json({ error: 'Status cannot be updated' });
+        }
+
+        // Update the survey with the new status
+        const updatedDoc = {
+          $set: {
+            status: newStatus
+          }
+        };
+
+        const result = await surveyCollection.updateOne(filter, updatedDoc);
+        res.send(result);
+      } catch (error) {
+        res.status(500).json({ error: error.message });
+      }
+    });
 
     app.get('/surveys/latest', async (req, res) => {
       const cursor = surveyCollection.find().sort({ creationTime: -1 }).limit(6);
