@@ -137,6 +137,25 @@ async function run() {
       }
     });
 
+    // surveyor update servey
+    app.put('/surveyor/update/:id', async(req,res) =>{
+      const id = req.params.id;
+      const filter = {_id: new ObjectId(id)};
+      const options = { upsert: true };
+      const updatedSurvey = req.body;
+      const survey ={
+        $set:{
+            title: updatedSurvey.title,
+            description: updatedSurvey.description,
+            options: updatedSurvey.options,
+            deadline: updatedSurvey.deadline,
+            category: updatedSurvey.category
+        }
+      }
+      const result = await surveyCollection.updateOne(filter, survey, options);
+      res.send(result);
+    })
+
     app.get('/surveys/latest', async (req, res) => {
       const cursor = surveyCollection.find().sort({ creationTime: -1 }).limit(6);
       const result = await cursor.toArray();
