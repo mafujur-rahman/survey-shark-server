@@ -31,6 +31,7 @@ async function run() {
 
     const userCollection = client.db('surveyDB').collection('users');
     const surveyCollection = client.db('surveyDB').collection('survey');
+    const surveyResponses = client.db('surveyDB').collection('responses')
 
     // Authentication routes
     app.get('/users', async (req, res) => {
@@ -50,7 +51,6 @@ async function run() {
 
     app.post('/users', async (req, res) => {
       const user = req.body;
-
       const query = { email: user.email };
       const existingUser = await userCollection.findOne(query);
       if (existingUser) {
@@ -138,23 +138,37 @@ async function run() {
     });
 
     // surveyor update servey
-    app.put('/surveyor/update/:id', async(req,res) =>{
+    app.put('/surveyor/update/:id', async (req, res) => {
       const id = req.params.id;
-      const filter = {_id: new ObjectId(id)};
+      const filter = { _id: new ObjectId(id) };
       const options = { upsert: true };
       const updatedSurvey = req.body;
-      const survey ={
-        $set:{
-            title: updatedSurvey.title,
-            description: updatedSurvey.description,
-            options: updatedSurvey.options,
-            deadline: updatedSurvey.deadline,
-            category: updatedSurvey.category
+      const survey = {
+        $set: {
+          title: updatedSurvey.title,
+          description: updatedSurvey.description,
+          options: updatedSurvey.options,
+          deadline: updatedSurvey.deadline,
+          category: updatedSurvey.category
         }
       }
       const result = await surveyCollection.updateOne(filter, survey, options);
       res.send(result);
-    })
+    });
+
+    // surveyor view surveys
+    app.get('/responses', async (req, res) => {
+          const surveys = await surveyResponses.find().toArray(); 
+          res.send(surveys);
+  });
+  
+  app.get('/responses/:id', async (req, res) => {
+    const id = req.params.id;
+    const query = { _id: new ObjectId(id) };
+    const result = await surveyResponses.findOne(query);
+    res.send(result);
+});
+
 
     app.get('/surveys/latest', async (req, res) => {
       const cursor = surveyCollection.find().sort({ creationTime: -1 }).limit(6);
@@ -172,6 +186,13 @@ async function run() {
       const result = await surveyCollection.find().toArray();
       res.send(result);
     });
+
+    // survey responses
+    app.post('/responses', async (req, res) => {
+      const newResponse = req.body;
+      const result = await surveyResponses.insertOne(newResponse);
+      res.send(result);
+    })
 
     app.post('/surveys', async (req, res) => {
       const newSurvey = req.body;
