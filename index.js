@@ -34,6 +34,7 @@ async function run() {
     const surveyResponses = client.db('surveyDB').collection('responses');
     const surveyFeedbacks = client.db('surveyDB').collection('feedbacks');
     const paymentCollection = client.db('surveyDB').collection('payments');
+    const reportCollection = client.db('surveyDB').collection('reports');
 
     // Authentication routes
     app.get('/users', async (req, res) => {
@@ -194,6 +195,29 @@ async function run() {
     app.get('/surveys/most-voted', async (req, res) => {
       const cursor = surveyCollection.find().sort({ totalVotes: -1 }).limit(6);
       const result = await cursor.toArray();
+      res.send(result);
+    });
+
+
+    // available surveys
+    app.get('/available-surveys', async (req, res) => {
+      try {
+        const currentDate = new Date();
+        const result = await surveyCollection.find({ deadline: { $gte: currentDate.toISOString().split('T')[0] } }).toArray();
+        res.json(result);
+    } catch (error) {
+        console.error('Error fetching surveys:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+
+
+// report related api
+
+    app.post('/reports', async(req,res) =>{
+      const newReport = req.body;
+      const result = await reportCollection.insertOne(newReport);
       res.send(result);
     });
 
