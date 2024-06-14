@@ -31,7 +31,9 @@ async function run() {
 
     const userCollection = client.db('surveyDB').collection('users');
     const surveyCollection = client.db('surveyDB').collection('survey');
-    const surveyResponses = client.db('surveyDB').collection('responses')
+    const surveyResponses = client.db('surveyDB').collection('responses');
+    const surveyFeedbacks = client.db('surveyDB').collection('feedbacks');
+    const paymentCollection = client.db('surveyDB').collection('payments');
 
     // Authentication routes
     app.get('/users', async (req, res) => {
@@ -137,6 +139,13 @@ async function run() {
       }
     });
 
+    // post feedbacks
+    app.post('/surveyFeedbacks', async(req,res) =>{
+      const newFeedback = req.body;
+      const result = await surveyFeedbacks.insertOne(newFeedback);
+      res.send(result);
+    })
+
     // surveyor update servey
     app.put('/surveyor/update/:id', async (req, res) => {
       const id = req.params.id;
@@ -205,6 +214,13 @@ async function run() {
       res.send(result);
     });
 
+    // payment post 
+    app.post('/payments', async(req,res) =>{
+      const payment = req.body;
+      const result = await paymentCollection.insertOne(payment);
+      res.send(result);
+    });
+
     // Payment intent creation endpoint
     app.post('/create-payment-intent', async (req, res) => {
       const { amount } = req.body;
@@ -223,15 +239,34 @@ async function run() {
       }
     });
 
-    app.put('/api/users/:id', async (req, res) => {
-      const { id } = req.params;
-      const { role } = req.body;
+    app.patch('/users/:email', async (req, res) => {
+      const newRole = req.body;
+      const email = req.params.email;
+      const user = await userCollection.findOne({ email: email }); 
+      if (!user) {
+          return res.status(404).json({ error: 'User not found' });
+      }
+  
+      const UserRole = {
+          $set: {
+              role: newRole.role,
+          }
+      }
+      const result = await userCollection.updateOne({ email: email }, UserRole); 
+      res.send(result);
+  });
+  app.get('/users/:email', async (req, res) => {
+    const email = req.params.email;
 
-      // Update user role logic here
-      // Example: Update user in database
+    const user = await userCollection.findOne({ email: email });
+    if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+    }
 
-      res.json({ success: true, message: 'User role updated' });
-    });
+    res.send(user);
+});
+
+  
 
     // Send a ping to confirm a successful connection
     await client.db('admin').command({ ping: 1 });
