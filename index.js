@@ -35,6 +35,7 @@ async function run() {
     const surveyFeedbacks = client.db('surveyDB').collection('feedbacks');
     const paymentCollection = client.db('surveyDB').collection('payments');
     const reportCollection = client.db('surveyDB').collection('reports');
+    const commentCollection = client.db('surveyDB').collection('comments');
 
     // Authentication routes
     app.get('/users', async (req, res) => {
@@ -215,12 +216,19 @@ async function run() {
 
 // report related api
 
+    app.get('/reports', async(req,res) =>{
+      const result =await reportCollection.find().toArray();
+      res.send(result);
+    });
+
     app.post('/reports', async(req,res) =>{
       const newReport = req.body;
       const result = await reportCollection.insertOne(newReport);
       res.send(result);
     });
 
+
+    // suevey related api 
     app.get('/surveys', async (req, res) => {
       const result = await surveyCollection.find().toArray();
       res.send(result);
@@ -241,6 +249,13 @@ async function run() {
       // Set the creation timestamp
       newSurvey.creationTime = new Date().toISOString();
       const result = await surveyCollection.insertOne(newSurvey);
+      res.send(result);
+    });
+
+    // comments api
+    app.post('/comments', async(req,res) =>{
+      const newComment = req.body;
+      const result = await commentCollection.insertOne(newComment);
       res.send(result);
     });
 
