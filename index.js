@@ -139,6 +139,12 @@ async function run() {
       }
     });
 
+    // get feedbacks
+    app.get('/surveyFeedbacks', async(req,res) =>{
+      const result = await surveyFeedbacks.find().toArray();
+      res.send(result);
+    });
+
     // post feedbacks
     app.post('/surveyFeedbacks', async(req,res) =>{
       const newFeedback = req.body;
@@ -214,6 +220,13 @@ async function run() {
       res.send(result);
     });
 
+    // payment get
+    app.get('/payments', async(req,res) =>{
+      const result = await paymentCollection.find().toArray();
+      res.send(result);
+    });
+
+
     // payment post 
     app.post('/payments', async(req,res) =>{
       const payment = req.body;
@@ -238,6 +251,7 @@ async function run() {
         res.status(500).send({ error: error.message });
       }
     });
+
 
     app.patch('/users/:email', async (req, res) => {
       const newRole = req.body;
@@ -266,7 +280,6 @@ async function run() {
     res.send(user);
 });
 
-  
 
     // Send a ping to confirm a successful connection
     await client.db('admin').command({ ping: 1 });
