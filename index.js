@@ -11,7 +11,7 @@ const port = process.env.PORT || 5000;
 
 // middleware
 app.use(cors({
-  origin:["http://localhost:5173","https://survey-shark-ccd5f.web.app","https://survey-shark-ccd5f.firebaseapp.com" ]
+  origin: ["http://localhost:5173", "https://survey-shark-ccd5f.web.app", "https://survey-shark-ccd5f.firebaseapp.com"]
 }));
 app.use(express.json());
 
@@ -48,7 +48,7 @@ async function run() {
       console.log('Generated token:', token);
       res.send({ token });
     });
-    
+
     // midleware
     const verifyToken = (req, res, next) => {
       console.log('inside verify token', req.headers.authorization);
@@ -279,6 +279,28 @@ async function run() {
     });
 
 
+    // Update vote
+    app.patch('/surveys/vote/:id', async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+
+
+      try {
+        const result = await surveyCollection.updateOne(filter, {
+          $inc: { totalVotes: 1 }
+        });
+
+        if (result.modifiedCount === 1) {
+          res.status(200).send({ message: 'Vote counted successfully.' });
+        } else {
+          res.status(404).send({ message: 'Survey not found.' });
+        }
+      } catch (error) {
+        console.error(error);
+        res.status(500).send({ message: 'An error occurred while counting the vote.' });
+      }
+    });
+
     // available surveys
     app.get('/available-surveys', async (req, res) => {
       try {
@@ -308,7 +330,16 @@ async function run() {
 
 
     // suevey related api 
-    app.get('/surveys', async (req, res) => {
+    app.get('/publish-surveys', async (req, res) => {
+      try {
+        const result = await surveyCollection.find({ status: 'publish' }).toArray();
+        res.send(result);
+      } catch (error) {
+        res.status(500).send("Failed to fetch surveys");
+      }
+    });
+
+    app.get('/surveys', async(req,res) =>{
       const result = await surveyCollection.find().toArray();
       res.send(result);
     });
